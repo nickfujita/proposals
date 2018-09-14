@@ -1,0 +1,586 @@
+<pre>
+  NEP: <to be assigned>
+  Title: Unified dApp API for wallet providers
+  Author: Nick Fujita <nickfujita@gmail.com>, Matus Zamborsky <zamborsky@gmail.com>
+  Type: Standard
+  Status: Draft
+  Created: 2018-08-28
+</pre>
+
+==Abstract==
+
+This NEP describes a common API interface for dApps to communicate with external wallet providers. The use of a trusted 3rd party wallet providers will help users feel more secure when using dApps, and the unified interface will help dApp creators to have a more uniform developer experience when making their dApps compatible with various providers.
+
+
+==Motivation==
+
+===End Users===
+
+As dApps come into the ecosystem, there will be more concerns about the safety of user assets. If dApps all required users to input their private keys in order to use them, it just takes one malicious dApp to steal all their funds. By using a trusted wallet provider which interfaces with the various dApps in the ecosystem on their behalf, users can reduce the exposure of their private keys. This will even allow users to transact with their hardware wallets via the wallet provider,  never having to reveal their private keys even to the wallet itself.
+
+===dApp Developers===
+
+One of the initial hurtles for any developer when starting to develop a dApp is to create a wallet module that will allow the user and application to interface with the NEO blockchain. While there are many quality SDKs out there such as neon-js for facilitating the communication of these requests, there are often many hurtles to successfully constructing the right combination of methods, along with input and output parsing. The issue only gets amplified when trying to integrate with hardware wallet providers such as a Ledger device.
+
+While there may be several options for 3rd party wallet providers that will help them to facilitate these transactions, the is currently no common consensus on the consistency of their interfaces. With a lack of consistency in interfaces to use these wallet provider services, dApp developers will be forced to make a decision to have their platform supported by a single provider, or to double or even triple their development efforts to accommodate all the different wallet provider interfaces. This will lead to a fragmentation in the dApps ecosystem.
+
+===Wallet providers===
+
+Each wallet provider, when deciding on supporting dApps to utilize their services as an authentication mechanism will be faced with a decision on how to implement an API to communicate with the dApps. Wallet providers can choose to create their own API from scratch, create their own version of existing projects, or aim to directly duplication an existing API. In the case that the provider decides to make their own API interface from scratch, and try to promote dApps to use it, time and effort will inevitably be wasted by both the provider and competing providers on getting dApp developers on board with using their custom communication interface. If we have a unified interface for such transactions, providers can spend more time on making their individual services better for their users.
+
+The current list of wallet providers that can benefit from the use of this protocol are currently:
+- nOS dApps browser
+- NeoLink Chrome extension
+- NEX Chrome extension
+- O3 dApps browser
+
+Each wallet provider has their own value proposition to it's users beyond the interface from this protocol itself, so it seems that formalizing it would be a net positive for all.
+
+Additionally, since there are a significant amount of overlap in the protocols between NEO and Ontology for sending assets, and interacting with contract on NeoVM, this proposal is a joint effort with [https://github.com/ontio/OEPs/pull/8 OEP6]. Since there are differences in the two platforms, the result of these proposals will not be identical, nor should they be, but getting as much overlap as possible will help to simplify cross-chain interactions for both platforms.
+
+
+==Specification==
+
+===dApp API Interface===
+====getProvider====
+Returns information about the  dAPI provider, including who this provider is, the version of their dAPI, and the NEP that the interface is compatible with.
+
+'''Method Interface'''
+
+<pre>
+function getProvider(): Promise<Provider>
+</pre>
+
+'''Input arguments'''
+
+None
+
+'''Success return value'''
+
+object - Provider information defined by the interface below:
+<pre>
+interface Provider {
+  name: string;
+  website: string;
+  version: string;
+  compatibility: string[];
+}
+</pre>
+
+The compatibility field will return a list of strings that corresponds to NEPs that the dAPI conforms to. For example:
+<pre>
+compatibility: [
+    'NEP-14',
+    'NEP-23',
+    'NEP-29'
+]
+</pre>
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_DENIED`
+
+'''Example'''
+
+<pre>
+getProvider()
+.then((provider: Provider) => {
+  const {
+    name,
+    website,
+    version,
+    compatibility,
+  } = provider;
+
+  console.log('Provider name: ' + name);
+  console.log('Provider website: ' + website);
+  console.log('Provider dAPI version: ' + version);
+  console.log('Provider dAPI compatibility: ' + JSON.stringify(compatibility));
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_DENIED:
+      console.log('The user rejected the request to connect with your dApp.');
+      break;
+  }
+});
+</pre>
+
+====getAccount====
+Return the Account that is currently connected to the dApp.
+
+'''Method Interface'''
+
+<pre>
+function getAccount(): Promise<{ address: string, publicKey: string }>
+</pre>
+
+'''Input arguments'''
+
+None
+
+'''Success return value'''
+
+address: string - Address of the connected account
+
+publicKey: string - Address of the connected account
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_DENIED`
+
+'''Example'''
+
+<pre>
+getAccount()
+.then((account: Account) => {
+  const {
+    address,
+    publicKey,
+  } = account;
+
+  console.log('Provider address: ' + address);
+  console.log('Provider public key: ' + publicKey);
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_DENIED:
+      console.log('The user rejected the request to connect with your dApp');
+      break;
+  }
+});
+</pre>
+
+
+
+====getBalance====
+Return balance of a specific asset for the given account.
+
+'''Method Interface'''
+
+<pre>
+function getBalance({ address: string, asset: string }): Promise<{ address: string, asset: string, amount: string }}>
+</pre>
+
+'''Input arguments'''
+
+address: string - The asset symbol the check the balance for the connected account
+
+asset: string - The asset symbol the check the balance for the connected account
+
+
+'''Success return value'''
+
+address: string - Address of the connected account
+
+asset: string - Asset symbol for the requested balance
+
+amount: string - Parsed balance of the requested asset
+
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_DENIED`
+
+'''Example'''
+
+<pre>
+getBalance({
+  address: 'AeysVbKWiLSuSDhg7DTzUdDyYYKfgjojru',
+  asset: 'NKN'
+})
+.then((result: Result) => {
+  const {
+    address,
+    asset,
+    amount,
+  } = result;
+
+  console.log('Connected address: ' + address);
+  console.log('Asset: ' + asset);
+  console.log('Amount: ' + amount);
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_DENIED:
+      console.log('The user rejected the request to connect with your dApp');
+      break;
+  }
+});
+</pre>
+
+
+====send====
+Invoke a transfer of a specified amount of a given asset from the connected account to another account.
+
+'''Method Interface'''
+
+<pre>
+function send({ to: string, asset: string, amount: string, remark?: string }): Promise<txid: string>
+</pre>
+
+'''Input arguments'''
+
+to: string - Address of the receiver of the assets to be sent
+
+asset: string - The symbol of the asset to be sent
+
+amount: string - The parsed amount of the asset to be sent
+
+remark?: string - (Optional) Description of the transaction to be made
+
+
+'''Success return value'''
+
+txid: string - The transaction ID of the send invocation
+
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_REFUSED`|`SEND_ERROR`|`MALFORMED_ADDRESS`|`CANCELED`
+
+'''Example'''
+
+<pre>
+send({
+  to: 'ATaWxfUAiBcQixNPq6TvKHEHPQum9bx79d',
+  asset: 'GAS',
+  amount: '0.0001',
+  remark: 'Hash puppy clothing purchase. Invoice#abc123',
+})
+.then((txid: string) => {
+  console.log('Send transaction success! Transaction ID: ' + txid);
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_REFUSED:
+      console.log('Connection dApp not connected. Please call the "connect" function.');
+      break;
+   case SEND_ERROR:
+    console.log('There was an error when broadcasting this transaction to the network.');
+    break;
+   case MALFORMED_ADDRESS:
+      console.log('The receiver address provided is not valid.');
+      break;
+  case CANCELED:
+    console.log('The user has canceled this transaction.');
+    break;
+  }
+});
+</pre>
+
+
+====invokeRead====
+Execute a contract invocation in read-only mode.
+
+'''Method Interface'''
+
+<pre>
+type ArgumentType = `string`|`boolean`|`hash160`|`integer`|`bytearray`|`array`;
+
+interface Argument {
+  type: ArgumentType;
+  value: any;
+}
+
+function invokeRead({ scriptHash: string, operation: string, args: Argument[] }): Promise<result: Object>
+</pre>
+
+'''Input arguments'''
+
+scriptHash: string - script hash of the smart contract to invoke a read on
+operation: string - operation on the smart contract to call
+args: Argument[] - any input arguments for the operation
+
+
+'''Success return value'''
+
+result: Object - Response from RPC node
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_REFUSED`|`RPC_ERROR`
+
+'''Example'''
+
+<pre>
+invokeRead({
+  scriptHash: '505663a29d83663a838eee091249abd167e928f5',
+  operation: 'calculatorAdd',
+  arguments: [
+    {
+      type: 'integer',
+      value: 2
+    },
+    {
+      type: 'integer',
+      value: 10
+    }
+  ],
+})
+.then((result: Object) => {
+  console.log('Read invocation result: ' + JSON.stringigy(result));
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_REFUSED:
+      console.log('Connection dApp not connected. Please call the "connect" function.');
+      break;
+   case RPC_ERROR:
+    console.log('There was an error when broadcasting this transaction to the network.');
+    break;
+  }
+});
+</pre>
+
+
+====invoke====
+Execute a contract invocation.
+
+'''Method Interface'''
+
+<pre>
+type ArgumentType = `string`|`boolean`|`hash160`|`integer`|`bytearray`|`array`;
+
+interface Argument {
+  type: ArgumentType;
+  value: any;
+}
+
+function invoke({ scriptHash: string, operation: string, args: Argument[] }): Promise<txid: string>
+</pre>
+
+'''Input arguments'''
+
+scriptHash: string - script hash of the smart contract to invoke a read on
+operation: string - operation on the smart contract to call
+args: Argument[] - any input arguments for the operation
+
+
+'''Success return value'''
+
+txid: string - The transaction ID of the invocation
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_REFUSED`|`SEND_ERROR`|`MALFORMED_ADDRESS`|`CANCELED`
+
+'''Example'''
+
+<pre>
+invoke({
+  scriptHash: '505663a29d83663a838eee091249abd167e928f5',
+  operation: 'storeData',
+  arguments: [
+    {
+      type: 'string',
+      value: 'hello'
+    }
+  ],
+})
+.then((txid: string) => {
+  console.log('Invoke transaction success! Transaction ID: ' + txid);
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_REFUSED:
+      console.log('Connection dApp not connected. Please call the "connect" function.');
+      break;
+    case RPC_ERROR:
+      console.log('There was an error when broadcasting this transaction to the network.');
+      break;
+    case CANCELED:
+      console.log('The user has canceled this transaction.');
+      break;
+  }
+});
+</pre>
+
+
+====getStorage====
+Reads the raw value in smart contract storage.
+
+'''Method Interface'''
+
+<pre>
+function getStorage({ scriptHash: string, key: string }): Promise<value: string>
+</pre>
+
+'''Input arguments'''
+
+scriptHash: string - script hash of the smart contract to invoke a read on
+key: string - key of the storage value to retreive from the contract
+
+'''Success return value'''
+
+value: string - The raw value that's stored in the contract
+
+'''Error return value'''
+
+string - `NO_PROVIDER`|`CONNECTION_REFUSED`|`RPC_ERROR`
+
+'''Example'''
+
+<pre>
+getStorage({
+  scriptHash: '505663a29d83663a838eee091249abd167e928f5',
+  key: 'game.status'
+})
+.then((value: string) => {
+  console.log('Storage value: ' + value);
+})
+.catch((err: string) => {
+  switch(err) {
+    case NO_PROVIDER:
+      console.log('No provider available.');
+      break;
+    case CONNECTION_REFUSED:
+      console.log('Connection dApp not connected. Please call the "connect" function.');
+      break;
+   case RPC_ERROR:
+    console.log('There was an error when broadcasting this transaction to the network.');
+    break;
+  }
+});
+</pre>
+
+
+===Provider Request Handling===
+Implementation details of per dApp domain handling will be left to the discression of the wallet provider. Proviers can choose to allow users to trust certain dApps to automatically execute transaction on their behalf, or a certain subset of transaction types. Below are basic guidelines for general handling of requests from dApps via the protocol interface.
+
+====getProvider====
+Upon receiving this request, return:
+* The name of the provider wallet
+* The provider website
+* The privider specifc version of the wallet
+* A list of NEP for which the specific provider protocol is compatable with
+
+Example
+<pre>
+{
+  name: 'Awesome Wallet',
+  website: 'https://www.awesome.com',
+  version: 'v0.0.1',
+  compatibility: [
+    'NEP-14',
+    'NEP-23',
+    'NEP-29'
+  ]
+}
+</pre>
+
+====getAccount====
+Upon receiving this request, return:
+- The address and public key of account currently selected by the user in the wallet interface
+
+Example
+<pre>
+{
+  address: 'AeysVbKWiLSuSDhg7DTzUdDyYYKfgjojru',
+  publicKey: '03d43468721ef8936548878071b534d8228c313e02e6d90cef8c65fd3c2d4eaeed'
+}
+</pre>
+
+====getBalance====
+Upon receiving this request, fetch the latest balance of the given account for the specific asset, and return the amount with an echo of the request details.
+
+Example
+<pre>
+{
+  address: 'AeysVbKWiLSuSDhg7DTzUdDyYYKfgjojru',
+  asset: 'NKN',
+  amount: '0.00000233'
+}
+</pre>
+
+====send====
+Upon receiving this request
+* Validate the inputs
+** To address is valid
+** Asset symbol is valid
+** Amount is valid value, and account has enough balance
+* Broadcast the RPC request
+* Return the transaction Id
+
+Example
+<pre>
+'ed54fb38dff371be6e3f96e4880405758c07fe6dd1295eb136fe15f311e9ff77'
+</pre>
+
+====invokeRead====
+Upon receiving this request
+* Validate and format the inputs
+** Script hash is valid
+** Format parameters
+*** If `byteArray`, convert to appropriate hexstring based on assumed format
+* Broadcast the RPC request
+* Return the RPC response results
+
+Example
+<pre>
+{
+  script: '8h89fh398f42f.....89hf2894hf9834',
+  state: 'HALT, BREAK',
+  gas_consumed: '0.13',
+  stack: [
+    {
+      type: 'Integer',
+      value: '1337'
+    }
+  ]
+}
+</pre>
+
+====invoke====
+
+Upon receiving this request
+* Validate and format the inputs
+** Script hash is valid
+** Format parameters
+*** If `byteArray`, convert to appropriate hexstring based on assumed format
+* Broadcast the RPC request
+* Return the transaction id
+
+Example
+<pre>
+'34e07328e50984b28a26e3a534878f7db23a8b6827fbfbb20419c3b6b7410129'
+</pre>
+
+====getStorage====
+
+Upon receiving this request
+* Validate and format the inputs
+** Script hash is valid
+* Broadcast the RPC request
+* Return the RPC response results
+
+Example
+<pre>
+'hello world'
+</pre>
+
+==Rational==
+
+This protocol will allow dApp developers to create applications that interact with the NEO blockchain without having to be concerned about managing a full wallet within their application or the details related to handing transaction creation or broadcasting. This will also allow dApps to allow users to transact in a secure fashion that does not require sharing of their private key.
+
+==Implementation==
+
+In progress. To be finalized as consensus is reached on the specifications of this NEP.
