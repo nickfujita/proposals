@@ -2182,10 +2182,15 @@ This protocol will allow dApp developers to create applications that interact wi
 
 [https://github.com/O3Labs/o3-dapi/tree/master/packages/neo Client JS Package (NPM/CDN)]
 
-===NEL===
-[https://github.com/NewEconoLab/TeemoWallet TeemoWallet]
+===NeoLogin===
+[https://neologin.io/ NeoLogin]
 
-[https://dapi.nel.group/en/#neo-dapi-introduction dAPI Documentation]
+[https://neologin.io/api/ dAPI Documentation]
+
+===NEOLine===
+[https://neoline.cn/ NEOLine]
+
+[https://neoline.cn/dapi/ dAPI Documentation]
 
 ==dApp Client Integrations==
 
